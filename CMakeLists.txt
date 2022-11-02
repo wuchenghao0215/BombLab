@@ -3,4 +3,4 @@ project(BombLab)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(BombLab main.cpp)
+add_executable(BombLab bomb.c)
