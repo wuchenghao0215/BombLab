@@ -1,6 +1,6 @@
 # BombLab
 
-## phase_1
+## phase_1 （考察判断）
 
 输入
 
@@ -34,45 +34,9 @@
 
 于是phase_1只要手动输入```An endless Light awaits you in a perfect world of silent song...```即可通过
 
-## phase_2
+## phase_2 （考察循环）
 
-输入
-
-```text
-(gdb) disas phase_2
-```
-
-查看phase_2的汇编代码
-
-```text
-   0x0000000000002472 <+25>:     callq  0x2d4d <read_six_numbers>
-   0x0000000000002477 <+30>:     cmpl   $0xc,(%rsp)
-   0x000000000000247b <+34>:     jne    0x2487 <phase_2+46>
-   0x000000000000247d <+36>:     mov    %rsp,%rbx
-   0x0000000000002480 <+39>:     lea    0x14(%rsp),%rbp
-   0x0000000000002485 <+44>:     jmp    0x2497 <phase_2+62>
-   0x0000000000002487 <+46>:     callq  0x2c8d <explode_bomb>
-   0x000000000000248c <+51>:     jmp    0x247d <phase_2+36>
-   0x000000000000248e <+53>:     add    $0x4,%rbx
-   0x0000000000002492 <+57>:     cmp    %rbp,%rbx
-   0x0000000000002495 <+60>:     je     0x24ac <phase_2+83>
-   0x0000000000002497 <+62>:     mov    0x3c87(%rip),%eax        # 0x6124 <mul.2>
-   0x000000000000249d <+68>:     imul   (%rbx),%eax
-   0x00000000000024a0 <+71>:     cmp    %eax,0x4(%rbx)
-   0x00000000000024a3 <+74>:     je     0x248e <phase_2+53>
-   0x00000000000024a5 <+76>:     callq  0x2c8d <explode_bomb>
-   0x00000000000024aa <+81>:     jmp    0x248e <phase_2+53>
-   0x00000000000024ac <+83>:     mov    0x18(%rsp),%rax
-   0x00000000000024b1 <+88>:     sub    %fs:0x28,%rax
-   0x00000000000024ba <+97>:     jne    0x24c3 <phase_2+106>
-   0x00000000000024bc <+99>:     add    $0x28,%rsp
-   0x00000000000024c0 <+103>:    pop    %rbx
-   0x00000000000024c1 <+104>:    pop    %rbp
-   0x00000000000024c2 <+105>:    retq   
-   0x00000000000024c3 <+106>:    callq  0x20a0 <__stack_chk_fail@plt>
-```
-
-注意到```read_six_numbers```函数，查看它的汇编
+查看phase_2的汇编代码，注意到```read_six_numbers```函数，查看它的汇编
 
 ```text
    0x0000000000002d6a <+29>:     lea    0x1884(%rip),%rsi        # 0x45f5
@@ -116,7 +80,7 @@ void phase_2(int *a) {
 }
 ```
 
-## phase_3
+## phase_3 （考察switch）
 
 用同样的方法，先观察汇编。注意到和phase_2一样用到了```sscanf```函数，由下一行的cmp函数与0x2比较可知，这个phase应该输入3个数字。要找到准确的输入格式，输入：
 
@@ -134,9 +98,38 @@ void phase_2(int *a) {
 
 输入的char与0x20做了一次异或，暂时不知道有什么用处
 
-在下面有一组```movslq   (%rdx,%rax,4),%rax```然后```jmpq    *%rax```的指令非常引人注意，看起来是switch语句。如果第一个int输入0，跳转到第一个分支，第二个int应该等于0x22f，即559，然后知道char xor 0x20 应该等于0x69，即应该输入```I```
+在下面有一组```movslq   (%rdx,%rax,4),%rax```然后```jmpq    *%rax```的指令非常引人注意，看起来是switch语句。
+
+1. 如果第一个int输入0，跳转到第一个分支
+2. 第二个int应该等于0x22f，即559
+3. 然后知道输入的字符 xor 0x20 应该等于0x69，即应该输入```I```
 
 综上，依次输入```0 I 559```即可过掉这个phase
 
-## phasee_4
+## phasee_4 （考察递归）
 
+1. 输入两个int，第一个应当小于等于```0xe```，即小于等于14。
+2. 把```(第一个输入, 0, 14)```作为参数，调用func4函数
+3. func返回值应该是7，第二个输入减去11应该是7
+4. 所以这个phase应该输入```14 18```
+
+func4函数的C语言表示如下
+
+```C
+func4(int x, int y, int z) {
+   int a = z - y;
+   if (a < 0) {
+      a = (a + 1) / 2;
+   } else {
+      a = a / 2;
+   }
+   a += y;
+   if (a > x) {
+      return 2 * func4(x, y, a - 1);
+   } else if (x < a) {
+      return 2 * func4(x, a + 1, z) + 1;
+   } else {
+      return 0;
+   }
+}
+```
